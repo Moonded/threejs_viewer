@@ -1,11 +1,117 @@
 ---
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
-
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+import Layout from "../layouts/Layout.astro";
 ---
 
 <Layout>
-	<Welcome />
+  <div id="loadingBar" class="hidden absolute top-0 left-0 w-0 h-1.5 bg-red-700 z-50"></div>
+  <div class="absolute top-0 right-0 z-50">
+    <div class="p-2 bg-blue-800 border-0">
+      <select class="py-1.5 pl-1 text-base border-0 bg-white focus:outline-none focus:border-0" autocomplete="off" id="models">
+        <option class="py-1.5" selected="true" disabled hidden>Choose Model</option>
+        <option class="py-1.5" value="Lowdown_Update.glb">Lowdown</option>
+        <option class="py-1.5" value="Mining_outpost.glb">Mining Outpost</option>
+      </select>
+    </div>
+  </div>
+  <div id="threeContainer" class="absolute top-0 left-0 w-full h-full z-[1] "></div>
+
+  <script>
+    import * as THREE from "three";
+    import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+    import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(
+      75,
+      window.innerWidth / window.innerHeight,
+      0.01,
+      100
+    );
+    const renderer = new THREE.WebGLRenderer();
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.minDistance = 15;
+    controls.maxDistance = 50;
+
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setAnimationLoop(animate);
+
+    const threeContainer = document.getElementById("threeContainer");
+    if (threeContainer) {
+      threeContainer.appendChild(renderer.domElement);
+    }
+
+    window.addEventListener("resize", onWindowResize, false);
+    window.addEventListener("load", () => {
+      const modelsElement = document.getElementById("models");
+      if (modelsElement) {
+        modelsElement.addEventListener("change", (e) => {
+          const target = e.target;
+          if (target) {
+            const path = (target as HTMLSelectElement).value;
+            Load(path);
+          }
+        });
+      }
+    });
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    const ambientLight = new THREE.AmbientLight(0xffffff);
+    ambientLight.castShadow = false;
+    ambientLight.intensity = 2.5;
+    scene.add(ambientLight);
+
+    camera.position.x = -15;
+    camera.position.y = 30;
+    camera.position.z = 0;
+
+    controls.update();
+
+    const manager = new THREE.LoadingManager();
+    manager.onStart = function (url, itemsLoaded, itemsTotal) {
+      progressElement.style.display = "block";
+	  progressElement.style.width = "5%";
+    };
+    manager.onLoad = function () {
+      console.log("Loading complete!");
+      progressElement.style.display = "none";
+    };
+
+    const progressElement = document.getElementById("loadingBar") as HTMLElement;
+    if (!progressElement) {
+      throw new Error("Loading bar element not found");
+    }
+
+    manager.onProgress = function (url, itemsLoaded, itemsTotal) {
+      progressElement.style.width = (itemsLoaded / itemsTotal) * 100 + "%";
+    };
+    manager.onError = function (url) {
+      console.log("There was an error loading " + url);
+    };
+
+    const loader = new GLTFLoader(manager);
+    let root: any;
+
+    function Load(path: string) {
+      loader.load('https://files.moonded.com/Web3D/' + path, function (gltf) {
+        if (root && root.parent) root.parent.remove(root);
+
+        root = gltf.scene;
+        scene.add(root);
+
+        root.rotation.x = -1.5;
+      });
+    }
+
+    function animate() {
+      renderer.render(scene, camera);
+      controls.update();
+    }
+  </script>
 </Layout>
