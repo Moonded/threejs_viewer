@@ -16,5 +16,9 @@
   },
   "devDependencies": {
     "@types/three": "^0.171.0"
+  },
+  "engines": {
+    "node": ">=22.9.0",
+    "pnpm": ">=9.15.1"
   }
 }
